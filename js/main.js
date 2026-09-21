@@ -3302,6 +3302,14 @@ function clearAllTeams() {
 }
 
 // Tooltips para habilidades y movimientos.
+// Ratón (hover): la burbuja aparece al pasar por encima y sigue al cursor.
+// Táctil (sin hover): aparece al TOCAR, anclada al elemento (no bajo el dedo, que
+//   la taparía) y se cierra al tocar fuera, al hacer scroll o al girar la pantalla.
+//   En los elementos que ya tienen una acción propia (slot de movimiento, mote,
+//   nivel, habilidad/objeto del modal) el toque corto mantiene su acción y el
+//   tooltip se pide con una PULSACIÓN LARGA (~450 ms).
+// Se usan Pointer Events: pointerType distingue ratón de dedo/lápiz, así que en
+// equipos híbridos funcionan las dos vías sin abrir dos burbujas a la vez.
 // Idempotente: crea el tooltip y registra los listeners UNA sola vez, aunque
 // setupTooltips() se llame muchas veces. Los handlers usan delegación en document,
 // así que funcionan con elementos creados dinámicamente (fichas y modales).
@@ -3318,7 +3326,8 @@ function setupTooltips() {
             padding: 8px;
             border-radius: 4px;
             font-size: 12px;
-            max-width: 300px;
+            line-height: 1.35;
+            max-width: min(300px, calc(100vw - 24px));
             z-index: 10001;
             display: none;
             pointer-events: none;
@@ -3330,40 +3339,39 @@ function setupTooltips() {
     if (window.__tooltipHandlersReady) return;
     window.__tooltipHandlersReady = true;
 
-    document.addEventListener('mouseover', async (e) => {
-        const tip = document.getElementById('tooltip');
-        if (!tip) return;
+    // Elemento con tooltip bajo el puntero/dedo, o null.
+    const tooltipTargetFor = (node) => (node && node.closest
+        ? node.closest('.ability-tooltip, .move-tooltip, .species-tooltip, .item-tooltip, .defense-tooltip, .nature-tooltip')
+        : null);
 
-        const abilityEl = e.target.closest('.ability-tooltip');
-        const moveEl = e.target.closest('.move-tooltip');
-        const speciesEl = e.target.closest('.species-tooltip');
-        const itemEl = e.target.closest('.item-tooltip');
-        const defenseEl = e.target.closest('.defense-tooltip');
-        const natureEl = e.target.closest('.nature-tooltip');
+    // Elementos cuyo toque corto ya tiene una acción propia (abrir el selector de
+    // movimientos, editar mote/nivel, elegir habilidad/objeto): en táctil se
+    // respeta esa acción y el tooltip se pide con una pulsación larga.
+    const OWN_ACTION_SELECTOR = '.move-slot, .move-select-item, .nickname-badge, .level-badge, .ability-option, .item-autocomplete-item';
+
+    // Contenido HTML del tooltip de 'el', o null si no hay nada que mostrar.
+    async function buildTooltipContent(el) {
+        const abilityEl = el.closest('.ability-tooltip');
+        const moveEl = el.closest('.move-tooltip');
+        const speciesEl = el.closest('.species-tooltip');
+        const itemEl = el.closest('.item-tooltip');
+        const defenseEl = el.closest('.defense-tooltip');
+        const natureEl = el.closest('.nature-tooltip');
 
         if (natureEl) {
-            tip.innerHTML = getNatureTooltipHtml(natureEl.dataset.nature || 'hardy');
-            tip.style.display = 'block';
-            return;
+            return getNatureTooltipHtml(natureEl.dataset.nature || 'hardy');
         }
 
         if (defenseEl) {
             const types = (defenseEl.dataset.types || '').split(',').filter(Boolean);
-            if (types.length) {
-                tip.innerHTML = `<strong>Type defense (${types.join(' / ')})</strong>${getDefensiveSummaryHtml(types)}`;
-                tip.style.display = 'block';
-            }
-            return;
+            if (!types.length) return null;
+            return `<strong>Type defense (${types.join(' / ')})</strong>${getDefensiveSummaryHtml(types)}`;
         }
 
         if (itemEl) {
             const itemName = itemEl.dataset.itemName;
             const itemData = await fetchItemData(itemName);
-            if (itemData) {
-                tip.innerHTML = `<strong>${itemName}</strong><br>${itemData.effect}`;
-                tip.style.display = 'block';
-            }
-            return;
+            return itemData ? `<strong>${itemName}</strong><br>${itemData.effect}` : null;
         }
 
         if (speciesEl) {
@@ -3373,62 +3381,208 @@ function setupTooltips() {
             for (const p of pokemonCache.values()) {
                 if (p.name === speciesName) { data = p; break; }
             }
-            if (data && (data.pokedexEntry || data.genus)) {
-                const displayName = speciesName.charAt(0).toUpperCase() + speciesName.slice(1);
-                tip.innerHTML = `<strong>${displayName}</strong>`
-                    + (data.genus ? `<br><em>${data.genus}</em>` : '')
-                    + (data.pokedexEntry ? `<br>${data.pokedexEntry}` : '');
-                tip.style.display = 'block';
-            }
-            return;
+            if (!data || (!data.pokedexEntry && !data.genus)) return null;
+            const displayName = speciesName.charAt(0).toUpperCase() + speciesName.slice(1);
+            return `<strong>${displayName}</strong>`
+                + (data.genus ? `<br><em>${data.genus}</em>` : '')
+                + (data.pokedexEntry ? `<br>${data.pokedexEntry}` : '');
         }
 
         if (abilityEl) {
             const abilityName = abilityEl.dataset.ability;
             const abilityData = await fetchAbilityData(abilityName);
-            if (abilityData) {
-                tip.innerHTML = `<strong>${abilityName.replace(/-/g, ' ')}</strong><br>${abilityData.effect}`;
-                tip.style.display = 'block';
-            }
+            if (!abilityData) return null;
+            return `<strong>${abilityName.replace(/-/g, ' ')}</strong><br>${abilityData.effect}`;
         } else if (moveEl) {
             const moveName = moveEl.dataset.move;
             const moveData = await fetchMoveData(moveName);
-            if (moveData) {
-                const accuracyText = moveData.accuracy == null ? 'Nunca falla' : `${moveData.accuracy}%`;
-                const classLabels = { physical: 'Físico', special: 'Especial', status: 'Estado' };
-                const classText = classLabels[moveData.damage_class] || moveData.damage_class;
-                const priorityText = moveData.priority ? `<br>Prioridad: ${moveData.priority > 0 ? '+' : ''}${moveData.priority}` : '';
-                const effectChanceText = moveData.effectChance ? `<br>Efecto secundario: ${moveData.effectChance}%` : '';
-                tip.innerHTML = `<strong>${moveName.replace(/-/g, ' ')}</strong>`
-                    + `<br>Tipo: ${moveData.type}`
-                    + `<br>Categoría: ${classText}`
-                    + `<br>Potencia: ${moveData.power || '—'}`
-                    + `<br>Precisión: ${accuracyText}`
-                    + `<br>PP: ${moveData.pp}`
-                    + priorityText
-                    + effectChanceText
-                    + `<br>${moveData.description}`;
-                tip.style.display = 'block';
-            }
+            if (!moveData) return null;
+
+            const accuracyText = moveData.accuracy == null ? 'Nunca falla' : `${moveData.accuracy}%`;
+            const classLabels = { physical: 'Físico', special: 'Especial', status: 'Estado' };
+            const classText = classLabels[moveData.damage_class] || moveData.damage_class;
+            const priorityText = moveData.priority ? `<br>Prioridad: ${moveData.priority > 0 ? '+' : ''}${moveData.priority}` : '';
+            const effectChanceText = moveData.effectChance ? `<br>Efecto secundario: ${moveData.effectChance}%` : '';
+            return `<strong>${moveName.replace(/-/g, ' ')}</strong>`
+                + `<br>Tipo: ${moveData.type}`
+                + `<br>Categoría: ${classText}`
+                + `<br>Potencia: ${moveData.power || '—'}`
+                + `<br>Precisión: ${accuracyText}`
+                + `<br>PP: ${moveData.pp}`
+                + priorityText
+                + effectChanceText
+                + `<br>${moveData.description}`;
         }
+
+        return null;
+    }
+
+    // --- Anclaje, mostrar/ocultar y limpieza de hover inline ---
+    // Elemento al que está anclado el tooltip en táctil (null con ratón) y token
+    // para descartar respuestas de red que ya no vienen al caso.
+    let anchoredEl = null;
+    let anchorToken = 0;
+    let suppressNextClick = false;
+
+    function hideTooltip() {
+        const tip = document.getElementById('tooltip');
+        if (tip) tip.style.display = 'none';
+        anchoredEl = null;
+        anchorToken++;
+    }
+
+    // Coloca el tooltip anclado al elemento: encima si cabe y, si no, debajo, y
+    // siempre dentro de la ventana (una burbuja pegada al dedo no se leería).
+    function positionTooltipAt(el) {
+        const tip = document.getElementById('tooltip');
+        if (!tip || !el || !el.getBoundingClientRect) return;
+
+        const rect = el.getBoundingClientRect();
+        const margin = 8;
+        const scrollX = window.scrollX;
+        const scrollY = window.scrollY;
+        const vw = document.documentElement.clientWidth;
+        const vh = document.documentElement.clientHeight;
+
+        tip.style.display = 'block';
+        tip.style.visibility = 'hidden'; // medir sin que se vea el salto
+        const w = tip.offsetWidth;
+        const h = tip.offsetHeight;
+
+        let left = rect.left + scrollX + rect.width / 2 - w / 2;
+        left = Math.max(scrollX + margin, Math.min(left, scrollX + vw - w - margin));
+
+        let top = rect.top + scrollY - h - margin;
+        if (rect.top - h - margin < margin) top = rect.bottom + scrollY + margin;
+        top = Math.max(scrollY + margin, Math.min(top, scrollY + vh - h - margin));
+
+        tip.style.left = left + 'px';
+        tip.style.top = top + 'px';
+        tip.style.visibility = 'visible';
+    }
+
+    // Muestra el tooltip de 'el'. Con anchored = true queda pegado al elemento y se
+    // pinta al instante con un "Loading…", porque el primer dato puede venir de red.
+    async function showTooltip(el, anchored = false) {
+        const tip = document.getElementById('tooltip');
+        if (!tip || !el) return;
+
+        const token = ++anchorToken;
+        anchoredEl = anchored ? el : null;
+
+        if (anchored) {
+            tip.innerHTML = '<span style="opacity:0.65;">Loading…</span>';
+            positionTooltipAt(el);
+        }
+
+        const html = await buildTooltipContent(el);
+
+        // Mientras cargaba, el usuario ya tocó otra cosa: se descarta la respuesta.
+        if (token !== anchorToken || (anchored && anchoredEl !== el)) return;
+        if (!html) { hideTooltip(); return; }
+
+        tip.innerHTML = html;
+        if (anchored) positionTooltipAt(el);
+        tip.style.display = 'block';
+    }
+
+    // --------- Ratón: hover clásico; la burbuja sigue al cursor ---------
+    document.addEventListener('pointerover', (e) => {
+        if (e.pointerType !== 'mouse') return; // el dedo va por el camino táctil
+        const el = tooltipTargetFor(e.target);
+        if (el) showTooltip(el);
     });
 
-    document.addEventListener('mousemove', (e) => {
+    document.addEventListener('pointermove', (e) => {
+        if (e.pointerType !== 'mouse') return;
         const tip = document.getElementById('tooltip');
-        if (tip && tip.style.display === 'block') {
+        if (tip && tip.style.display === 'block' && !anchoredEl) {
             tip.style.left = e.pageX + 10 + 'px';
             tip.style.top = e.pageY + 10 + 'px';
         }
     });
 
-    document.addEventListener('mouseout', (e) => {
-        const from = e.target.closest('.ability-tooltip, .move-tooltip, .species-tooltip, .item-tooltip, .defense-tooltip, .nature-tooltip');
+    document.addEventListener('pointerout', (e) => {
+        if (e.pointerType !== 'mouse') return;
+        const from = tooltipTargetFor(e.target);
         if (!from) return;
+        // Al pasar a otro elemento con tooltip, el refresco lo hace pointerover.
+        if (tooltipTargetFor(e.relatedTarget)) return;
         // Solo ocultar si el ratón sale realmente del elemento (no al pasar a un hijo)
         if (from.contains(e.relatedTarget)) return;
-        const tip = document.getElementById('tooltip');
-        if (tip) tip.style.display = 'none';
+        hideTooltip();
     });
+
+    // Los estados hover inline (onmouseover/onmouseout) no aportan nada en táctil y
+    // en iOS pueden gastar el primer toque en "activar el hover": los quitamos del
+    // bloque tocado (se regeneran al volver a pintar la ficha).
+    function stripInlineHoverHandlers(node) {
+        if (!node || !node.closest) return;
+        const scope = node.closest('.team-builder, .modal-content') || node;
+        scope.querySelectorAll('[onmouseover], [onmouseout]').forEach(n => {
+            n.removeAttribute('onmouseover');
+            n.removeAttribute('onmouseout');
+        });
+    }
+
+    // --------- Táctil / lápiz: toque corto (acción o info) y pulsación larga ---------
+    const LONG_PRESS_MS = 450;
+    let pressTimer = null;
+    let longPressFired = false;
+
+    document.addEventListener('pointerdown', (e) => {
+        if (e.pointerType === 'mouse') return;
+        stripInlineHoverHandlers(e.target);
+        suppressNextClick = false;
+        longPressFired = false;
+        clearTimeout(pressTimer);
+
+        const el = tooltipTargetFor(e.target);
+        if (!el) { hideTooltip(); return; } // el toque fuera cierra el tooltip anclado
+
+        pressTimer = setTimeout(() => {
+            longPressFired = true;
+            suppressNextClick = true; // la pulsación larga no debe ejecutar la acción
+            showTooltip(el, true);
+        }, LONG_PRESS_MS);
+    }, { passive: true });
+
+    document.addEventListener('pointerup', (e) => {
+        if (e.pointerType === 'mouse') return;
+        clearTimeout(pressTimer);
+        if (longPressFired) return; // ya se mostró con la pulsación larga
+
+        const el = tooltipTargetFor(e.target);
+        if (!el) return;
+        if (el.closest(OWN_ACTION_SELECTOR)) return; // el toque corto es su propia acción
+
+        // Elemento informativo: el toque muestra (o cierra) su tooltip y no debe
+        // disparar la acción de la ficha (p. ej. abrir la configuración).
+        suppressNextClick = true;
+        if (anchoredEl === el) { hideTooltip(); return; }
+        showTooltip(el, true);
+    });
+
+    document.addEventListener('pointercancel', () => {
+        clearTimeout(pressTimer);
+        longPressFired = false;
+    });
+
+    document.addEventListener('click', (e) => {
+        if (suppressNextClick) {  // venimos de un toque informativo o de pulsación larga
+            suppressNextClick = false;
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+        if (anchoredEl && tooltipTargetFor(e.target) !== anchoredEl) hideTooltip();
+    }, true); // en captura: corta el click antes de que llegue al elemento
+
+    // El anclaje deja de ser válido al hacer scroll (también dentro de un modal),
+    // al girar la pantalla o al redimensionar.
+    document.addEventListener('scroll', () => { if (anchoredEl) hideTooltip(); }, { passive: true, capture: true });
+    window.addEventListener('orientationchange', hideTooltip);
+    window.addEventListener('resize', () => { if (anchoredEl) positionTooltipAt(anchoredEl); });
 }
 
 async function createRandomTeam() {

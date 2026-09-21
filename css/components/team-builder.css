@@ -1685,3 +1685,22 @@
     border-color: transparent;
     box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
 }
+
+/* ===== Tooltips en pantallas táctiles ===== */
+
+/* En táctil el tooltip se abre tocando: sobre los elementos con tooltip quitamos
+   la selección de texto y el menú contextual de la pulsación larga, que estorban
+   a ese gesto (el escritorio no se ve afectado: solo aplica sin hover real). */
+@media (hover: none) {
+    .ability-tooltip,
+    .move-tooltip,
+    .species-tooltip,
+    .item-tooltip,
+    .defense-tooltip,
+    .nature-tooltip {
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+}
+
