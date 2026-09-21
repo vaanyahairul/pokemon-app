@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Full Pokédex</title>
+    <link rel="icon" type="image/png" href="../assets/images/Battle/icon_ball.png">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components/pokedex.css">
+</head>
+<body>
+    <div class="night-stars" id="night-stars"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+    <div class="container">
+        <header>
+            <div style="text-align: center;">
+                <h1><img src="../assets/images/Icons/menuPokedex.png" alt="" class="page-icon">Full Pokédex</h1>
+                <p>Explore all Pokémon with detailed information</p>
+            </div>
+        </header>
+
+        <div class="pokedex-container">
+            <div class="pokemon-list">
+                <div class="search-container">
+                    <input type="text" id="pokemon-search" placeholder="Search Pokémon...">
+                    <div class="filters-row">
+                        <select id="generation-filter">
+                            <option value="">All generations</option>
+                            <option value="1">Generation I (Kanto)</option>
+                            <option value="2">Generation II (Johto)</option>
+                            <option value="3">Generation III (Hoenn)</option>
+                            <option value="4">Generation IV (Sinnoh)</option>
+                            <option value="5">Generation V (Unova)</option>
+                            <option value="6">Generation VI (Kalos)</option>
+                            <option value="7">Generation VII (Alola)</option>
+                            <option value="8">Generation VIII (Galar)</option>
+                            <option value="9">Generation IX (Paldea)</option>
+                        </select>
+                        <select id="type-filter">
+                            <option value="">All types</option>
+                            <option value="normal">Normal</option>
+                            <option value="fire">Fire</option>
+                            <option value="water">Water</option>
+                            <option value="electric">Electric</option>
+                            <option value="grass">Grass</option>
+                            <option value="ice">Ice</option>
+                            <option value="fighting">Fighting</option>
+                            <option value="poison">Poison</option>
+                            <option value="ground">Ground</option>
+                            <option value="flying">Flying</option>
+                            <option value="psychic">Psychic</option>
+                            <option value="bug">Bug</option>
+                            <option value="rock">Rock</option>
+                            <option value="ghost">Ghost</option>
+                            <option value="dragon">Dragon</option>
+                            <option value="dark">Dark</option>
+                            <option value="steel">Steel</option>
+                            <option value="fairy">Fairy</option>
+                        </select>
+                        <select id="sort-filter">
+                            <option value="id-asc">By Number (↑)</option>
+                            <option value="id-desc">By Number (↓)</option>
+                            <option value="name-asc">By Name (A-Z)</option>
+                            <option value="name-desc">By Name (Z-A)</option>
+                            <option value="bst-desc">By BST (↓)</option>
+                            <option value="bst-asc">By BST (↑)</option>
+                            <option value="hp-desc">By HP (↓)</option>
+                            <option value="hp-asc">By HP (↑)</option>
+                            <option value="attack-desc">By Attack (↓)</option>
+                            <option value="attack-asc">By Attack (↑)</option>
+                            <option value="defense-desc">By Defense (↓)</option>
+                            <option value="defense-asc">By Defense (↑)</option>
+                            <option value="spAttack-desc">By Sp. Atk (↓)</option>
+                            <option value="spAttack-asc">By Sp. Atk (↑)</option>
+                            <option value="spDefense-desc">By Sp. Def (↓)</option>
+                            <option value="spDefense-asc">By Sp. Def (↑)</option>
+                            <option value="speed-desc">By Speed (↓)</option>
+                            <option value="speed-asc">By Speed (↑)</option>
+                            <option value="height-desc">By Height (↓)</option>
+                            <option value="height-asc">By Height (↑)</option>
+                            <option value="weight-desc">By Weight (↓)</option>
+                            <option value="weight-asc">By Weight (↑)</option>
+                        </select>
+                    </div>
+                    <div class="action-buttons">
+                        <button id="favorites-toggle" class="filter-btn">⭐ Show Favorites</button>
+                        <button id="advanced-filters" class="filter-btn">🔍 Advanced Filters</button>
+                        <button id="clear-comparison" class="filter-btn">🗑️ Clear Comparison (<span id="comparison-count">0</span>)</button>
+                    </div>
+                </div>
+                <div id="pokemon-grid" class="pokemon-grid">
+                    <!-- Pokémon are loaded here -->
+                </div>
+            </div>
+
+            <div class="pokemon-details">
+                <div id="comparison-container" class="comparison-container" style="display: none;">
+                    <!-- Comparison is loaded here -->
+                </div>
+                <div id="pokemon-info">
+                    <div class="welcome-message">
+                        <h2>Welcome to the Enhanced Pokédex!</h2>
+                        <p>Select a Pokémon from the list to see all its detailed information.</p>
+                        <p><small>❤️ Add to favorites | ⚖️ Compare Pokémon</small></p>
+                        <div class="pokeball-icon">⚪</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="pokeball-loader"></div>
+            <p>Loading Pokédex...</p>
+        </div>
+    </div>
+
+    <script src="../js/components/pokedex.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/theme.js"></script>
+</body>
+</html>

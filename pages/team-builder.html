@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Team Builder</title>
+    <link rel="icon" type="image/png" href="../assets/images/Battle/icon_ball.png">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components/team-builder.css">
+</head>
+<body>
+    <div class="night-stars" id="night-stars"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+    <div class="container">
+        <header>
+            <div style="text-align: center;">
+                <h1><img src="../assets/images/Icons/menuPokemon.png" alt="" class="page-icon">Team Builder</h1>
+            </div>
+        </header>
+
+        <div class="teams-container">
+            <div class="teams-header">
+                <h2>My Pokémon Teams</h2>
+                <div class="teams-actions">
+                </div>
+                
+                <button class="floating-toggle" onclick="toggleSidebar()" title="Show/Hide Menu">
+                    <span class="toggle-text">MENU</span>
+                </button>
+                
+                <div class="sidebar-menu">
+                    <div class="sidebar-header">
+                        <h3>Options</h3>
+                    </div>
+                    <div class="sidebar-actions">
+                        <button id="add-team" class="sidebar-btn primary" title="New Team">+ New Team</button>
+                        <button id="showdown-editor" class="sidebar-btn primary" title="Sync with Showdown">🔄 Sync Showdown</button>
+                        <button id="export-image" class="sidebar-btn secondary" title="Export as Image">📸 Export Image</button>
+                        <button id="random-team" class="sidebar-btn secondary" title="Random Team">🎲 Random Team</button>
+                        <button id="toggle-all-teams" class="sidebar-btn secondary" title="Collapse/Expand">⇅ Collapse/Expand</button>
+                        <button id="clear-all" class="sidebar-btn danger" title="Clear All">🗑️ Clear All</button>
+                    </div>
+                    
+                    <div class="sidebar-navigator">
+                        <div class="nav-header">
+                            <h4>Teams</h4>
+                        </div>
+                        <div class="nav-teams" id="nav-teams"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="teams-list">
+                <!-- Teams are generated here dynamically -->
+            </div>
+        </div>
+
+        <div class="team-template" style="display: none;">
+            <div class="team-builder">
+                <div class="team-slots">
+                    <div class="team-header">
+                        <div class="team-title-section">
+                            <button class="expand-toggle">▼</button>
+                            <input type="text" class="team-name" placeholder="Team name" value="Team 1">
+                            <span class="team-count">(0/6)</span>
+                        </div>
+                        <div class="team-buttons">
+                            <button class="remove-team remove-btn">🗑️</button>
+                        </div>
+                    </div>
+
+                    <div class="slots-container">
+                    <div class="team-slot" data-slot="0">
+                        <div class="slot-header">
+                            <label>Pokémon 1:</label>
+                            <select class="generation-filter" data-slot="0">
+                                <option value="">All Gens</option>
+                                <option value="1">Kanto</option>
+                                <option value="2">Johto</option>
+                                <option value="3">Hoenn</option>
+                                <option value="4">Sinnoh</option>
+                                <option value="5">Teselia</option>
+                                <option value="6">Kalos</option>
+                                <option value="7">Alola</option>
+                                <option value="8">Galar</option>
+                                <option value="9">Paldea</option>
+                            </select>
+                            <div class="pokemon-selector-container">
+                                <input type="text" class="pokemon-autocomplete" placeholder="Search Pokémon..." data-slot="0">
+                                <div class="autocomplete-dropdown" data-slot="0"></div>
+                            </div>
+                        </div>
+                        <div class="pokemon-display" data-slot="0">
+                            <div class="empty-slot">
+                                <span class="add-icon">+</span>
+                                <span class="slot-text">Select a Pokémon</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-slot" data-slot="1">
+                        <div class="slot-header">
+                            <label>Pokémon 2:</label>
+                            <select class="generation-filter" data-slot="1">
+                                <option value="">All Gens</option>
+                                <option value="1">Kanto</option>
+                                <option value="2">Johto</option>
+                                <option value="3">Hoenn</option>
+                                <option value="4">Sinnoh</option>
+                                <option value="5">Teselia</option>
+                                <option value="6">Kalos</option>
+                                <option value="7">Alola</option>
+                                <option value="8">Galar</option>
+                                <option value="9">Paldea</option>
+                            </select>
+                            <div class="pokemon-selector-container">
+                                <input type="text" class="pokemon-autocomplete" placeholder="Search Pokémon..." data-slot="1">
+                                <div class="autocomplete-dropdown" data-slot="1"></div>
+                            </div>
+                        </div>
+                        <div class="pokemon-display" data-slot="1">
+                            <div class="empty-slot">
+                                <span class="add-icon">+</span>
+                                <span class="slot-text">Select a Pokémon</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-slot" data-slot="2">
+                        <div class="slot-header">
+                            <label>Pokémon 3:</label>
+                            <div class="pokemon-selector-container">
+                                <select class="generation-filter" data-slot="2">
+                                    <option value="">All Gens</option>
+                                    <option value="1">Kanto</option>
+                                    <option value="2">Johto</option>
+                                    <option value="3">Hoenn</option>
+                                    <option value="4">Sinnoh</option>
+                                    <option value="5">Teselia</option>
+                                    <option value="6">Kalos</option>
+                                    <option value="7">Alola</option>
+                                    <option value="8">Galar</option>
+                                    <option value="9">Paldea</option>
+                                </select>
+                                <input type="text" class="pokemon-autocomplete" placeholder="Search Pokémon..." data-slot="2">
+                                <div class="autocomplete-dropdown" data-slot="2"></div>
+                            </div>
+                        </div>
+                        <div class="pokemon-display" data-slot="2">
+                            <div class="empty-slot">
+                                <span class="add-icon">+</span>
+                                <span class="slot-text">Select a Pokémon</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-slot" data-slot="3">
+                        <div class="slot-header">
+                            <label>Pokémon 4:</label>
+                            <div class="pokemon-selector-container">
+                                <select class="generation-filter" data-slot="3">
+                                    <option value="">All Gens</option>
+                                    <option value="1">Kanto</option>
+                                    <option value="2">Johto</option>
+                                    <option value="3">Hoenn</option>
+                                    <option value="4">Sinnoh</option>
+                                    <option value="5">Teselia</option>
+                                    <option value="6">Kalos</option>
+                                    <option value="7">Alola</option>
+                                    <option value="8">Galar</option>
+                                    <option value="9">Paldea</option>
+                                </select>
+                                <input type="text" class="pokemon-autocomplete" placeholder="Search Pokémon..." data-slot="3">
+                                <div class="autocomplete-dropdown" data-slot="3"></div>
+                            </div>
+                        </div>
+                        <div class="pokemon-display" data-slot="3">
+                            <div class="empty-slot">
+                                <span class="add-icon">+</span>
+                                <span class="slot-text">Select a Pokémon</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-slot" data-slot="4">
+                        <div class="slot-header">
+                            <label>Pokémon 5:</label>
+                            <div class="pokemon-selector-container">
+                                <select class="generation-filter" data-slot="4">
+                                    <option value="">All Gens</option>
+                                    <option value="1">Kanto</option>
+                                    <option value="2">Johto</option>
+                                    <option value="3">Hoenn</option>
+                                    <option value="4">Sinnoh</option>
+                                    <option value="5">Teselia</option>
+                                    <option value="6">Kalos</option>
+                                    <option value="7">Alola</option>
+                                    <option value="8">Galar</option>
+                                    <option value="9">Paldea</option>
+                                </select>
+                                <input type="text" class="pokemon-autocomplete" placeholder="Search Pokémon..." data-slot="4">
+                                <div class="autocomplete-dropdown" data-slot="4"></div>
+                            </div>
+                        </div>
+                        <div class="pokemon-display" data-slot="4">
+                            <div class="empty-slot">
+                                <span class="add-icon">+</span>
+                                <span class="slot-text">Select a Pokémon</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="team-slot" data-slot="5">
+                        <div class="slot-header">
+                            <label>Pokémon 6:</label>
+                            <div class="pokemon-selector-container">
+                                <select class="generation-filter" data-slot="5">
+                                    <option value="">All Gens</option>
+                                    <option value="1">Kanto</option>
+                                    <option value="2">Johto</option>
+                                    <option value="3">Hoenn</option>
+                                    <option value="4">Sinnoh</option>
+                                    <option value="5">Teselia</option>
+                                    <option value="6">Kalos</option>
+                                    <option value="7">Alola</option>
+                                    <option value="8">Galar</option>
+                                    <option value="9">Paldea</option>
+                                </select>
+                                <input type="text" class="pokemon-autocomplete" placeholder="Search Pokémon..." data-slot="5">
+                                <div class="autocomplete-dropdown" data-slot="5"></div>
+                            </div>
+                        </div>
+                        <div class="pokemon-display" data-slot="5">
+                            <div class="empty-slot">
+                                <span class="add-icon">+</span>
+                                <span class="slot-text">Select a Pokémon</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    
+                </div>
+                
+                <div class="team-compact-view">
+                    <div class="compact-size-comparison"></div>
+                </div>
+                
+                <div class="team-analysis">
+                    <div class="analysis-header" onclick="toggleAnalysisSection(this)">
+                        <h3>Team Analysis</h3>
+                        <span class="analysis-toggle">▼</span>
+                    </div>
+                    <div class="analysis-content">
+                    <div class="size-comparison-row">
+                        <div class="size-comparison">
+                            <h4>Size Comparison</h4>
+                            <div class="size-comparison-content"></div>
+                        </div>
+                    </div>
+                    <div class="analysis-primary">
+                        <div class="type-coverage">
+                            <h4>Offensive Coverage</h4>
+                            <div class="type-chart"></div>
+                        </div>
+                        <div class="attack-distribution">
+                            <h4>Attack Types</h4>
+                            <div class="attack-distribution-content"></div>
+                        </div>
+                        <div class="weaknesses">
+                            <h4>Team Weaknesses</h4>
+                            <div class="weaknesses-list"></div>
+                        </div>
+                    </div>
+
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="loading" class="loading-overlay" style="display: none;">
+        <div class="loading-content">
+            <div class="pokeball-loader"></div>
+            <p>Loading Pokémon...</p>
+        </div>
+    </div>
+
+    <script src="../js/main.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/theme.js"></script>
+</body>
+</html>

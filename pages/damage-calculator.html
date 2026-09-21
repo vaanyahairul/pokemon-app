@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Damage Calculator - Pokémon Tools</title>
+    <link rel="icon" type="image/png" href="../assets/images/Battle/icon_ball.png">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components/damage-calculator.css">
+</head>
+<body>
+    <div class="night-stars" id="night-stars"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+
+    <div class="container">
+        <div class="header">
+            <h1><img src="../assets/images/Icons/menuPokegear.png" alt="" class="page-icon">Damage Calculator</h1>
+        </div>
+
+        <div class="dc-layout">
+            <!-- ATTACKER -->
+            <section class="dc-panel dc-attacker">
+                <h2>⚔️ Attacker</h2>
+
+                <div class="dc-search-wrap">
+                    <input type="text" id="attacker-search" class="dc-search" placeholder="Search attacker Pokémon..." autocomplete="off">
+                    <div id="attacker-dropdown" class="dc-autocomplete-dropdown"></div>
+                </div>
+
+                <div id="attacker-header" class="dc-poke-header"></div>
+                <div id="attacker-realstats" class="dc-realstats"></div>
+
+                <div class="dc-params-top">
+                    <div class="dc-param">
+                        <label>Level</label>
+                        <input type="number" id="attacker-level" min="1" max="100" value="50">
+                    </div>
+                    <div class="dc-param">
+                        <label>Nature</label>
+                        <select id="attacker-nature"></select>
+                    </div>
+                </div>
+
+                <div class="dc-evtable" data-side="attacker">
+                    <div class="dc-evtable-head">
+                        <span></span><span>EVs</span><span>IVs</span>
+                    </div>
+                    <div class="dc-evtable-row"><label>HP</label><input type="number" id="attacker-ev-hp" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="attacker-iv-hp" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>Atk</label><input type="number" id="attacker-ev-attack" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="attacker-iv-attack" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>Def</label><input type="number" id="attacker-ev-defense" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="attacker-iv-defense" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>SpA</label><input type="number" id="attacker-ev-spAttack" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="attacker-iv-spAttack" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>SpD</label><input type="number" id="attacker-ev-spDefense" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="attacker-iv-spDefense" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>Spe</label><input type="number" id="attacker-ev-speed" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="attacker-iv-speed" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-ev-total" id="attacker-ev-total">Total EVs: 0/510</div>
+                </div>
+
+                <div class="dc-move-select">
+                    <label>Move</label>
+                    <select id="attacker-move" disabled>
+                        <option value="">Select a Pokémon first...</option>
+                    </select>
+                    <div id="attacker-move-info" class="dc-move-info"></div>
+                </div>
+            </section>
+
+            <!-- DEFENDER -->
+            <section class="dc-panel dc-defender">
+                <h2>🛡️ Defender</h2>
+
+                <div class="dc-search-wrap">
+                    <input type="text" id="defender-search" class="dc-search" placeholder="Search defender Pokémon..." autocomplete="off">
+                    <div id="defender-dropdown" class="dc-autocomplete-dropdown"></div>
+                </div>
+
+                <div id="defender-header" class="dc-poke-header"></div>
+                <div id="defender-realstats" class="dc-realstats"></div>
+
+                <div class="dc-params-top">
+                    <div class="dc-param">
+                        <label>Level</label>
+                        <input type="number" id="defender-level" min="1" max="100" value="50">
+                    </div>
+                    <div class="dc-param">
+                        <label>Nature</label>
+                        <select id="defender-nature"></select>
+                    </div>
+                </div>
+
+                <div class="dc-evtable" data-side="defender">
+                    <div class="dc-evtable-head">
+                        <span></span><span>EVs</span><span>IVs</span>
+                    </div>
+                    <div class="dc-evtable-row"><label>HP</label><input type="number" id="defender-ev-hp" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="defender-iv-hp" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>Atk</label><input type="number" id="defender-ev-attack" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="defender-iv-attack" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>Def</label><input type="number" id="defender-ev-defense" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="defender-iv-defense" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>SpA</label><input type="number" id="defender-ev-spAttack" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="defender-iv-spAttack" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>SpD</label><input type="number" id="defender-ev-spDefense" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="defender-iv-spDefense" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-evtable-row"><label>Spe</label><input type="number" id="defender-ev-speed" class="dc-ev" min="0" max="252" step="4" value="0"><input type="number" id="defender-iv-speed" class="dc-iv" min="0" max="31" value="31"></div>
+                    <div class="dc-ev-total" id="defender-ev-total">Total EVs: 0/510</div>
+                </div>
+            </section>
+        </div>
+
+        <div class="dc-action">
+            <button id="calculate-btn" class="dc-calc-btn">Calculate Damage</button>
+        </div>
+
+        <!-- RESULT -->
+        <section class="dc-result-panel">
+            <h2>Result</h2>
+            <div id="result">
+                <div class="dc-result-placeholder">Choose an attacker with its move and a defender to see the damage and the full formula.</div>
+            </div>
+        </section>
+    </div>
+
+    <script src="../js/components/damage-calculator.js"></script>
+    <script>
+        // Populate the nature selectors
+        const NATURES = [
+            ['hardy', 'Hardy (Neutral)'], ['lonely', 'Lonely (+Atk, -Def)'], ['brave', 'Brave (+Atk, -Spe)'],
+            ['adamant', 'Adamant (+Atk, -SpA)'], ['naughty', 'Naughty (+Atk, -SpD)'], ['bold', 'Bold (+Def, -Atk)'],
+            ['docile', 'Docile (Neutral)'], ['relaxed', 'Relaxed (+Def, -Spe)'], ['impish', 'Impish (+Def, -SpA)'],
+            ['lax', 'Lax (+Def, -SpD)'], ['timid', 'Timid (+Spe, -Atk)'], ['hasty', 'Hasty (+Spe, -Def)'],
+            ['serious', 'Serious (Neutral)'], ['jolly', 'Jolly (+Spe, -SpA)'], ['naive', 'Naive (+Spe, -SpD)'],
+            ['modest', 'Modest (+SpA, -Atk)'], ['mild', 'Mild (+SpA, -Def)'], ['quiet', 'Quiet (+SpA, -Spe)'],
+            ['bashful', 'Bashful (Neutral)'], ['rash', 'Rash (+SpA, -SpD)'], ['calm', 'Calm (+SpD, -Atk)'],
+            ['gentle', 'Gentle (+SpD, -Def)'], ['sassy', 'Sassy (+SpD, -Spe)'], ['careful', 'Careful (+SpD, -SpA)'],
+            ['quirky', 'Quirky (Neutral)']
+        ];
+        ['attacker-nature', 'defender-nature'].forEach(id => {
+            const select = document.getElementById(id);
+            select.innerHTML = NATURES.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+        });
+
+    </script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/theme.js"></script>
+</body>
+</html>

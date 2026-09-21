@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pokémon Tools - Home</title>
+    <link rel="icon" type="image/png" href="../assets/images/Battle/icon_ball.png">
+    <link rel="stylesheet" href="../css/main.css">
+</head>
+<body>
+    <div class="night-stars" id="night-stars"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+    <div class="container">
+        <h1 class="title">Pokémon Tools</h1>
+        
+        <div class="buttons-container">
+            <a href="team-builder.html" class="nav-button team-builder">
+                <img src="../assets/images/Icons/menuPokemon.png" alt="" class="nav-icon">
+                Team Builder
+            </a>
+            <a href="pokedex.html" class="nav-button pokedex">
+                <img src="../assets/images/Icons/menuPokedex.png" alt="" class="nav-icon">
+                Pokédex
+            </a>
+            <a href="type-calculator.html" class="nav-button type-calculator">
+                <img src="../assets/images/Icons/menuOptions.png" alt="" class="nav-icon">
+                Type Chart
+            </a>
+            <a href="damage-calculator.html" class="nav-button damage-calculator">
+                <img src="../assets/images/Icons/menuPokegear.png" alt="" class="nav-icon">
+                Damage Calculator
+            </a>
+        </div>
+    </div>
+    <script src="../js/nav.js"></script>
+    <script src="../js/theme.js"></script>
+</body>
+</html>

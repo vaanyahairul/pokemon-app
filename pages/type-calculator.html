@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Type Chart - Pokémon Tools</title>
+    <link rel="icon" type="image/png" href="../assets/images/Battle/icon_ball.png">
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="../css/components/type-calculator.css">
+</head>
+<body>
+    <div class="night-stars" id="night-stars"></div>
+    <button class="theme-toggle" onclick="toggleTheme()" title="Cambiar tema" aria-label="Cambiar tema">
+        <svg class="theme-icon icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        <svg class="theme-icon icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+    </button>
+
+    <div class="container">
+        <header>
+            <div style="text-align: center;">
+                <h1><img src="../assets/images/Icons/menuOptions.png" alt="" class="page-icon">Type Chart</h1>
+            </div>
+        </header>
+
+        <div class="calculator-container">
+            <!-- Type Selector -->
+            <div class="type-selector">
+                <h2>Analyze Types</h2>
+                <div class="type-inputs">
+                    <div class="type-input-group">
+                        <label>Type 1:</label>
+                        <select id="type1" onchange="calculateEffectiveness()">
+                            <option value="">Select type</option>
+                        </select>
+                    </div>
+                    <div class="type-input-group">
+                        <label>Type 2 (optional):</label>
+                        <select id="type2" onchange="calculateEffectiveness()">
+                            <option value="">No second type</option>
+                        </select>
+                    </div>
+                </div>
+                <button onclick="clearTypes()" class="clear-btn">Clear</button>
+                
+                <!-- Pokémon with this combination -->
+                <div class="pokemon-examples-section">
+                    <h3>Pokémon with this combination</h3>
+                    <div id="pokemonExamples" class="pokemon-examples-list">
+                        <span style="color: #718096;">Select a type to see examples</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results -->
+            <div class="results-section">
+                <div class="weaknesses">
+                    <h3>Weaknesses</h3>
+                    <div id="weaknessList" class="type-list"></div>
+                </div>
+                <div class="resistances">
+                    <h3>Resistances</h3>
+                    <div id="resistanceList" class="type-list"></div>
+                </div>
+                <div class="immunities">
+                    <h3>Immunities</h3>
+                    <div id="immunityList" class="type-list"></div>
+                </div>
+            </div>
+
+
+
+            <!-- Effectiveness Matrix -->
+            <div class="effectiveness-table">
+                <h2>Effectiveness Matrix</h2>
+                <div class="matrix-container">
+                    <div class="matrix-legend">
+                        <span class="legend-item"><span class="legend-color eff-2x"></span>2x (Super effective)</span>
+                        <span class="legend-item"><span class="legend-color eff-0-5x"></span>0.5x (Not very effective)</span>
+                        <span class="legend-item"><span class="legend-color eff-0x"></span>0x (No effect)</span>
+                    </div>
+                    <div id="typeMatrix" class="type-matrix"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/components/type-calculator.js"></script>
+    <script src="../js/nav.js"></script>
+    <script src="../js/theme.js"></script>
+</body>
+</html>
