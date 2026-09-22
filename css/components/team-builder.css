@@ -810,6 +810,116 @@
     opacity: 1;
 }
 
+/* Pokémon clicables en la vista colapsada: pista visual de que abren la ficha */
+.compact-size-comparison .size-item-clickable {
+    border-radius: 10px;
+    padding: 4px 6px;
+}
+
+.compact-size-comparison .size-item-clickable:hover {
+    background: rgba(255, 255, 255, 0.55);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.35);
+}
+
+.compact-size-comparison .size-item-clickable:focus-visible {
+    outline: 2px solid #667eea;
+    outline-offset: 2px;
+}
+
+/* Ventana flotante de detalle (equipo colapsado): la ficha clonada a ancho completo.
+   z-index menor que los modales de edición (moves/config) para que estos
+   queden siempre por encima cuando se abren desde el flotante. */
+#compact-pokemon-modal {
+    z-index: 990;
+}
+
+.compact-detail-content {
+    max-width: 560px;
+    padding-top: 40px; /* espacio para que el contenido no tape la X */
+}
+
+/* La X del flotante debe quedar siempre por encima del contenido clonado,
+   que de otro modo la cubre y roba los clicks. */
+#compact-pokemon-modal .close {
+    z-index: 10;
+}
+
+.compact-detail-body .pokemon-display {
+    width: 100%;
+    cursor: default;
+}
+
+/* En el flotante no se necesita el botón rojo de borrar (el modal ya tiene su propia X de cierre).
+   Sin esto, el .remove-btn queda superpuesto al .close del modal y se borra Pokémon por accidente. */
+.compact-detail-body .pokemon-display .remove-btn {
+    display: none !important;
+}
+
+.compact-detail-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 14px;
+}
+
+.compact-detail-actions .sidebar-btn {
+    width: auto;
+    margin: 0;
+}
+
+/* ===== Pokébola en la esquina superior izquierda de la ficha =====
+   Las imágenes ball_<KEY>.png son spritesheets de 8 frames (32x64 c/u).
+   Mostramos 1 frame recortando con background-size/position; el ratio del
+   contenedor (ancho:alto = 1:2) evita que la bola se deforme. */
+.pokeball-badge {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 26px;
+    height: 52px;               /* ratio 1:2 = un frame 32x64 sin deformar */
+    z-index: 10;
+    display: inline-block;
+    image-rendering: pixelated;  /* sprites nítidos al escalar */
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
+    transition: transform 0.15s ease;
+}
+
+/* Al pasar el mouse: gira en bucle recorriendo los frames del sheet. */
+.pokeball-badge:hover {
+    transform: scale(1.12);
+    animation: pokeball-spin-frames 0.6s steps(7) infinite;
+}
+
+/* Animación puntual (al cambiar de bola): recorre los frames un par de veces. */
+.pokeball-badge.pokeball-spin {
+    animation: pokeball-spin-frames 0.6s steps(7) 2;
+}
+
+@keyframes pokeball-spin-frames {
+    from { background-position-x: 0%; }
+    to   { background-position-x: 100%; }
+}
+
+/* Sprite de bola reutilizable (control del combobox y opciones del dropdown). */
+.ball-sprite {
+    display: inline-block;
+    image-rendering: pixelated;
+}
+
+/* Miniatura de la bola en la vista compacta del detalle (solo lectura) */
+.compact-detail-body .pokeball-badge { cursor: default; }
+
+/* Huella de la especie (junto al número/generación). Los PNG son negros.
+   La ficha tiene fondo de color por tipo (no depende del tema), así que en vez
+   de invertir por tema le damos un halo blanco para que la huella oscura
+   resalte sobre cualquier color de fondo. */
+.footprint-icon {
+    opacity: 0.9;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.9))
+            drop-shadow(0 0 1px rgba(255, 255, 255, 0.9));
+}
+
 .size-item div {
     margin-top: 8px;
     font-size: 0.8em;

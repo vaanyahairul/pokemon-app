@@ -183,4 +183,24 @@ No requiere instalación de dependencias ni servidor web.
 
 ---
 
-**Desarrollado con ❤️ para entrenadores Pokémon**
+## 📄 Licencia
+
+El **código** de este proyecto se distribuye bajo la licencia [MIT](LICENSE).
+Puedes usarlo, modificarlo y redistribuirlo libremente, conservando el aviso de copyright.
+
+```
+Copyright (c) 2026 VaanyaHairul
+```
+
+## 🙏 Créditos y atribución
+
+- **Autor / desarrollo:** VaanyaHairul
+- **Datos de Pokémon:** [PokéAPI](https://pokeapi.co) (nombres, stats, movimientos, habilidades, sprites base).
+- **Sprites, iconos, pokébolas, huellas y demás recursos gráficos** provienen de recursos de la comunidad de fangames (estilo Essentials/BW). Los derechos sobre estos assets pertenecen a sus autores originales.
+- **Pokémon y todos los nombres, imágenes y marcas relacionadas** son © Nintendo, Game Freak y The Pokémon Company.
+
+> Este es un proyecto **sin ánimo de lucro y con fines educativos/fan**. No está afiliado ni respaldado por Nintendo, Game Freak ni The Pokémon Company. Los assets de Pokémon se usan únicamente con fines no comerciales; si eres titular de derechos y deseas que se retire algún recurso, abre un issue.
+
+---
+
+**Desarrollado con ❤️ para entrenadores Pokémon — por VaanyaHairul**

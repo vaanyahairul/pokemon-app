@@ -1,4 +1,4 @@
-// Sistema de múltiples equipos Pokémon
+﻿// Sistema de múltiples equipos Pokémon
 const API_BASE = 'https://pokeapi.co/api/v2';
 const TOTAL_POKEMON = 1010;
 
@@ -518,6 +518,7 @@ function saveToSession() {
                 selectedAbility: pokemon.selectedAbility,
                 moves: pokemon.moves || [],
                 heldItem: pokemon.heldItem || '',
+                pokeball: pokemon.pokeball || DEFAULT_POKEBALL,
                 evs: pokemon.evs || null,
                 ivs: pokemon.ivs || null,
                 currentSprite: pokemon.currentSprite || 'front_default'
@@ -589,6 +590,7 @@ async function loadSavedTeam(savedTeam) {
                         selectedAbility: pokemonData.selectedAbility || pokemon.abilities[0]?.name,
                         moves: pokemonData.moves || [],
                         heldItem: pokemonData.heldItem || '',
+                        pokeball: pokemonData.pokeball || DEFAULT_POKEBALL,
                         evs: pokemonData.evs || { hp: 0, attack: 0, defense: 0, spAttack: 0, spDefense: 0, speed: 0 },
                         ivs: pokemonData.ivs || { hp: 31, attack: 31, defense: 31, spAttack: 31, spDefense: 31, speed: 31 },
                         currentSprite: pokemonData.currentSprite || 'front_default'
@@ -839,6 +841,7 @@ async function selectPokemon(team, slotIndex, pokemonId) {
             nickname: '',
             currentSprite: 'front_default',
             heldItem: '',
+            pokeball: DEFAULT_POKEBALL,
             evs: { hp: 0, attack: 0, defense: 0, spAttack: 0, spDefense: 0, speed: 0 },
             ivs: { hp: 31, attack: 31, defense: 31, spAttack: 31, spDefense: 31, speed: 31 }
         };
@@ -1250,6 +1253,8 @@ function updateTeamDisplay(team) {
             
             display.innerHTML = `
                 <button class="remove-btn" onclick="removePokemon('${team.id}', ${index})" style="position: absolute; top: 2px; right: 2px; background: rgba(229, 62, 62, 0.85); color: white; border: none; border-radius: 50%; width: 22px; height: 22px; cursor: pointer; font-size: 0.9em; line-height: 1; z-index: 10; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 4px rgba(0,0,0,0.25); transition: all 0.15s ease;" onmouseover="this.style.background='#e53e3e'; this.style.transform='scale(1.15)'" onmouseout="this.style.background='rgba(229, 62, 62, 0.85)'; this.style.transform='scale(1)'">&times;</button>
+
+                ${getPokeballBadgeHtml(pokemon.pokeball, team.id, index)}
                 
                 <div style="position: relative; display: inline-block;">
                     <img id="pokemon-sprite-${team.id}-${index}" src="${getSpriteUrl(pokemon, pokemon.currentSprite || 'front_default')}" alt="${pokemon.name}" 
@@ -1282,6 +1287,7 @@ function updateTeamDisplay(team) {
                     <div style="font-size: 0.85em; color: var(--text-primary); margin-bottom: 4px; display: flex; align-items: center; justify-content: center; gap: 8px;">
                         <span>#${pokemon.id.toString().padStart(3, '0')}</span>
                         ${getGenerationBadgeHtml(pokemon.id, pokemon.name, 16)}
+                        ${getFootprintTag(pokemon.name, 18)}
                     </div>
                     
                     <div class="defense-tooltip" data-types="${pokemon.types.join(',')}" style="margin-bottom: 6px; cursor: help; display: flex; gap: 4px; justify-content: center; align-items: center;">
@@ -1379,6 +1385,14 @@ function updateTeamDisplay(team) {
                 </div>
             `;
         }
+        // Si el detalle flotante del equipo colapsado está abierto para este slot,
+        // reconstruirlo desde la ficha ya actualizada (edición inline en vivo).
+        // Se hace en diferido para que el DOM del slot ya esté actualizado.
+        if (typeof refreshCompactPokemonDetail === 'function') {
+            const refreshTeamId = team.id;
+            const refreshSlot = index;
+            setTimeout(() => refreshCompactPokemonDetail(refreshTeamId, refreshSlot), 0);
+        }
     });
 }
 
@@ -1386,10 +1400,18 @@ function removePokemon(teamId, slotIndex) {
     const team = teams.find(t => t.id === teamId);
     if (team) {
         team.pokemon[slotIndex] = null;
-        
+
         const input = document.querySelector(`.pokemon-autocomplete[data-team-id="${teamId}"][data-slot="${slotIndex}"]`);
         if (input) input.value = '';
-        
+
+        // Si el detalle flotante mostraba este Pokémon, cerrarlo (ya no existe).
+        const compactModal = document.getElementById('compact-pokemon-modal');
+        if (compactModal && compactModal.style.display === 'block'
+            && compactModal.dataset.teamId === String(teamId)
+            && parseInt(compactModal.dataset.slotIndex) === slotIndex) {
+            closeCompactPokemonDetail();
+        }
+
         updateTeamDisplay(team);
         updateTeamAnalysis(team);
         if (!team.expanded) {
@@ -1455,22 +1477,134 @@ function updateCompactView(team) {
             </div>
     `;
     
-    teamPokemon.forEach(pokemon => {
-        const pokemonName = pokemon.nickname || pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+    teamPokemon.forEach((pokemon, filteredPos) => {
+        // NOTA: teamPokemon ya viene filtrado (sin nulos), así que hay que
+        // recuperar el índice real del slot para poder abrir el detalle.
+        // Se busca a partir de la posición ya resuelta para no colisionar
+        // cuando el equipo tiene dos veces el mismo objeto Pokémon.
+        const slotIndex = team.pokemon.slice(0, 6).indexOf(pokemon, filteredPos);
+        const safeTeamId = team.id.replace(/'/g, "\\'");
+        const rawName = pokemon.nickname || pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
+        const safeName = rawName.replace(/"/g, '&quot;');
         html += `
-            <div class="size-item">
+            <div class="size-item size-item-clickable" role="button" tabindex="0" onclick="openCompactPokemonDetail('${safeTeamId}', ${slotIndex})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openCompactPokemonDetail('${safeTeamId}', ${slotIndex});}" title="Ver ficha de ${safeName}" style="cursor: pointer;">
                 <img src="${getSpriteUrl(pokemon, pokemon.currentSprite || 'front_default')}" 
                      data-static="${pokemon.sprites[pokemon.currentSprite || 'front_default'] || ''}"
                      onerror="if(this.dataset.static && this.src !== this.dataset.static){this.src=this.dataset.static;}"
                      alt="${pokemon.name}" 
                      style="height: ${pokemon.height * scale}px;">
-                <div>${pokemonName}<br>${pokemon.height}m</div>
+                <div>${safeName}<br>${pokemon.height}m</div>
             </div>
         `;
     });
     
     html += '</div>';
     compactContainer.innerHTML = html;
+}
+
+// Ventana flotante de SOLO VISUALIZACIÓN de un Pokémon cuando el equipo está
+// colapsado. Clona la misma ficha que `updateTeamDisplay` (misma apariencia)
+// pero en modo lectura: sin editar mote/nivel/sexo/sprite, sin borrar y sin
+// configuración. Para editar se usa la vista expandida o el modal clásico.
+function openCompactPokemonDetail(teamId, slotIndex) {
+    const team = teams.find(t => t.id === teamId);
+    if (!team || !team.pokemon[slotIndex]) return;
+
+    let modal = document.getElementById('compact-pokemon-modal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'compact-pokemon-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content compact-detail-content">
+                <span class="close">&times;</span>
+                <div class="compact-detail-body"></div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        modal.querySelector('.close').addEventListener('click', closeCompactPokemonDetail);
+        // Cerrar al clickar fuera del contenido (overlay)
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) closeCompactPokemonDetail();
+        });
+    }
+
+    modal.dataset.teamId = teamId;
+    modal.dataset.slotIndex = slotIndex;
+
+    renderCompactPokemonDetailBody(team, slotIndex);
+
+    modal.style.display = 'block';
+    setupTooltips();
+    modal.dataset.refreshKey = `${teamId}:${slotIndex}:${Date.now()}`;
+}
+
+function closeCompactPokemonDetail() {
+    const modal = document.getElementById('compact-pokemon-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Refresca la ventana flotante de detalle si está abierta para ese slot.
+// Se llama desde updateTeamDisplay para que mote/nivel/sexo/sprite/movimientos
+// editados en la vista expandida se vean al instante sin cerrar y reabrir.
+function refreshCompactPokemonDetail(teamId, slotIndex) {
+    const modal = document.getElementById('compact-pokemon-modal');
+    if (!modal || modal.style.display !== 'block') return;
+    if (modal.dataset.teamId !== String(teamId) || parseInt(modal.dataset.slotIndex) !== slotIndex) return;
+    const content = modal.querySelector('.modal-content');
+    const scrollTop = content ? content.scrollTop : 0;
+    openCompactPokemonDetail(teamId, slotIndex);
+    const newContent = modal.querySelector('.modal-content');
+    if (newContent) newContent.scrollTop = scrollTop;
+}
+
+// Renderiza el clon de la ficha del Pokémon dentro del flotante.
+//
+// El cuerpo del flotante (#compact-detail-body) contiene una copia de la
+// ficha que updateTeamDisplay ya calculó para el slot real. updateTeamDisplay
+// pinta el slot incluso cuando el equipo está colapsado (solo se oculta el
+// bloque .team-builder), así que siempre podemos clonarlo.
+function renderCompactPokemonDetailBody(team, slotIndex) {
+    const modal = document.getElementById('compact-pokemon-modal');
+    if (!modal) return;
+    const body = modal.querySelector('.compact-detail-body');
+    if (!body) return;
+
+    const teamElement = document.querySelector(`[data-team-id="${team.id}"]`);
+    const display = teamElement
+        ? teamElement.querySelector(`.pokemon-display[data-team-id="${team.id}"][data-slot="${slotIndex}"]`)
+        : null;
+
+    body.innerHTML = '';
+    if (display) {
+        const clone = display.cloneNode(true);
+        // El clon se muestra como solo lectura:
+        // - quitar listeners inline que abran el modal clásico / edits
+        clone.querySelectorAll('[onclick], [onmouseover], [onmouseout]').forEach(n => {
+            n.removeAttribute('onclick');
+            n.removeAttribute('onmouseover');
+            n.removeAttribute('onmouseout');
+        });
+        // - quitar el botón de borrar Pokémon (no debe aparecer aquí)
+        const removeBtn = clone.querySelector('.remove-btn');
+        if (removeBtn) removeBtn.remove();
+        // - quitar botones de sprite (F/B/S/BS) que cambian de sprite
+        clone.querySelectorAll('button[onclick*="changePokemonSprite"]').forEach(b => b.remove());
+        // - desactivar tooltips inline que dependan del slot real (se rehace con setupTooltips)
+        clone.querySelectorAll('.item-badge, .ability-badge, .nature-badge, .move-slot, .species-tooltip, .defense-tooltip').forEach(el => {
+            el.style.pointerEvents = 'auto';
+        });
+        // - el id del sprite debe ser único: quitarlo
+        const spriteImg = clone.querySelector('img[id^="pokemon-sprite-"]');
+        if (spriteImg) spriteImg.removeAttribute('id');
+
+        body.appendChild(clone);
+    } else {
+        body.innerHTML = '<p style="padding:10px; color:#999;">Loading Pokémon data…</p>';
+    }
 }
 
 function updateTeamAnalysis(team) {
@@ -2120,6 +2254,18 @@ function openPokemonModal(team, slotIndex) {
                     <input type="hidden" id="pokemon-ability">
                 </div>
                 <div class="config-section">
+                    <label>Poké Ball:</label>
+                    <div class="ball-combobox" id="ball-combobox">
+                        <div class="ball-combobox-control" id="ball-combobox-control">
+                            <span id="pokemon-ball-icon" class="ball-sprite"></span>
+                            <span class="ball-combobox-label" id="pokemon-ball-label"></span>
+                            <span class="ball-combobox-arrow">▾</span>
+                        </div>
+                        <input type="hidden" id="pokemon-ball">
+                        <div class="ball-dropdown" id="ball-dropdown"></div>
+                    </div>
+                </div>
+                <div class="config-section">
                     <label>Item:</label>
                     <div class="item-combobox" id="item-combobox">
                         <div class="item-combobox-control" id="item-combobox-control">
@@ -2194,6 +2340,7 @@ function openPokemonModal(team, slotIndex) {
     
     // Cargar valores actuales
     setupNatureCombobox(selectedPokemon.nature || 'hardy');
+    setupBallCombobox(selectedPokemon.pokeball || DEFAULT_POKEBALL);
     setupItemCombobox(selectedPokemon.heldItem || '');
     
     // Cargar EVs
@@ -2230,6 +2377,7 @@ async function savePokemonConfig() {
     const nature = document.getElementById('pokemon-nature').value;
     const selectedAbility = document.getElementById('pokemon-ability').value;
     const heldItem = document.getElementById('pokemon-item').value.trim();
+    const pokeball = (document.getElementById('pokemon-ball').value || DEFAULT_POKEBALL).toUpperCase();
     
     const evs = {
         hp: parseInt(document.getElementById('ev-hp').value) || 0,
@@ -2249,9 +2397,12 @@ async function savePokemonConfig() {
     }
     
     // Actualizar datos del equipo
+    const prevBall = currentTeam.pokemon[currentSlot].pokeball || DEFAULT_POKEBALL;
     currentTeam.pokemon[currentSlot].nature = nature;
     currentTeam.pokemon[currentSlot].selectedAbility = selectedAbility;
     currentTeam.pokemon[currentSlot].heldItem = heldItem;
+    currentTeam.pokemon[currentSlot].pokeball = pokeball;
+    const ballChanged = prevBall !== pokeball;
     currentTeam.pokemon[currentSlot].evs = evs;
     currentTeam.pokemon[currentSlot].moves = moves;
     
@@ -2259,7 +2410,32 @@ async function savePokemonConfig() {
     updateTeamAnalysis(currentTeam);
     setupTooltips();
     saveToSession();
+
+    // Si cambió la pokébola, reproducir la animación de giro + apertura en la ficha.
+    if (ballChanged) {
+        const tid = currentTeam.id, slot = currentSlot;
+        setTimeout(() => playPokeballAnimation(tid, slot), 30);
+    }
+
     closeModal();
+}
+
+// Reproduce la animación de la pokébola recorriendo los 8 frames del
+// spritesheet (con steps) en la ficha del slot indicado. Se repite un par de
+// vueltas y vuelve al frame 0.
+function playPokeballAnimation(teamId, slotIndex) {
+    const teamElement = document.querySelector(`[data-team-id="${teamId}"]`);
+    if (!teamElement) return;
+    const display = teamElement.querySelector(`.pokemon-display[data-team-id="${teamId}"][data-slot="${slotIndex}"]`);
+    const badge = display ? display.querySelector('.pokeball-badge') : null;
+    if (!badge) return;
+    badge.classList.remove('pokeball-spin');
+    void badge.offsetWidth; // reiniciar animación
+    badge.classList.add('pokeball-spin');
+    badge.addEventListener('animationend', function handler() {
+        badge.classList.remove('pokeball-spin');
+        badge.removeEventListener('animationend', handler);
+    });
 }
 
 async function handleMoveAutocomplete(input, moveIndex, availableMoves) {
@@ -2481,6 +2657,56 @@ function natureLabelHtml(name) {
         + `</span>`;
 }
 
+// Configura el combobox de pokébola (dropdown con miniatura de cada bola).
+function setupBallCombobox(currentValue) {
+    const hidden = document.getElementById('pokemon-ball');
+    const control = document.getElementById('ball-combobox-control');
+    const icon = document.getElementById('pokemon-ball-icon');
+    const label = document.getElementById('pokemon-ball-label');
+    const dropdown = document.getElementById('ball-dropdown');
+    if (!hidden || !control || !icon || !label || !dropdown) return;
+
+    const setValue = (key) => {
+        const k = (key || DEFAULT_POKEBALL).toUpperCase();
+        hidden.value = k;
+        icon.style.cssText = pokeballFrameStyle(k, 0);
+        label.textContent = getPokeballLabel(k);
+        dropdown.querySelectorAll('.ball-option').forEach(o =>
+            o.classList.toggle('selected', o.dataset.ball === k));
+    };
+
+    // Construir opciones (cada una con miniatura + nombre).
+    dropdown.innerHTML = '';
+    POKEBALLS.forEach(ball => {
+        const opt = document.createElement('div');
+        opt.className = 'ball-option';
+        opt.dataset.ball = ball.key;
+        opt.innerHTML = `<span class="ball-sprite ball-option-icon" style="${pokeballFrameStyle(ball.key, 0)}"></span><span>${ball.label}</span>`;
+        opt.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            setValue(ball.key);
+            dropdown.classList.remove('show');
+        });
+        dropdown.appendChild(opt);
+    });
+
+    setValue((currentValue || DEFAULT_POKEBALL).toUpperCase());
+
+    control.onclick = () => {
+        const willOpen = !dropdown.classList.contains('show');
+        dropdown.classList.toggle('show', willOpen);
+        if (willOpen) {
+            const sel = dropdown.querySelector('.ball-option.selected');
+            if (sel) sel.scrollIntoView({ block: 'nearest' });
+        }
+    };
+
+    document.addEventListener('click', (e) => {
+        const box = document.getElementById('ball-combobox');
+        if (box && !box.contains(e.target)) dropdown.classList.remove('show');
+    });
+}
+
 // Configura el combobox de naturalezas con stats coloreados.
 function setupNatureCombobox(currentValue) {
     const hidden = document.getElementById('pokemon-nature');
@@ -2698,41 +2924,8 @@ function exportShowdown(team) {
         return;
     }
     
-    let showdownText = `=== ${team.name} ===\n\n`;
-    
-    teamPokemon.forEach(pokemon => {
-        let pokemonLine = '';
-        
-        // Nombre (con nickname si existe)
-        if (pokemon.nickname) {
-            pokemonLine += `${pokemon.nickname} (${pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1)})`;
-        } else {
-            pokemonLine += pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
-        }
-        
-        showdownText += pokemonLine + '\n';
-        
-        // Habilidad
-        if (pokemon.selectedAbility) {
-            showdownText += `Ability: ${pokemon.selectedAbility.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
-        }
-        
-        // Naturaleza
-        if (pokemon.nature && pokemon.nature !== 'hardy') {
-            showdownText += `${pokemon.nature.charAt(0).toUpperCase() + pokemon.nature.slice(1)} Nature\n`;
-        }
-        
-        // Movimientos
-        if (pokemon.moves && pokemon.moves.length > 0) {
-            pokemon.moves.forEach(move => {
-                showdownText += `- ${move.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
-            });
-        }
-        
-        showdownText += '\n';
-    });
-    
-    // Mostrar en modal
+    // Reutiliza el generador completo (incluye Level, género, IVs, pokébola...).
+    const showdownText = generateShowdownText(team);
     showTextModal('Export to Pokémon Showdown', showdownText, true);
 }
 
@@ -2786,7 +2979,39 @@ function parseShowdownText(text, team) {
                 });
                 currentPokemon.hasEvs = true;
             }
-        } else if (line.includes('IVs:') || line.includes('Tera Type:') || line.includes('Shiny:')) {
+        } else if (line.includes('Level:')) {
+            if (currentPokemon) {
+                const lvl = parseInt(line.split('Level:')[1].trim());
+                if (!isNaN(lvl)) currentPokemon.level = Math.max(1, Math.min(100, lvl));
+            }
+        } else if (line.includes('Ball:')) {
+            if (currentPokemon) {
+                // Convertir "Great Ball" -> "GREATBALL" y validar contra la lista.
+                const raw = line.split('Ball:')[1].trim();
+                const key = raw.replace(/[^a-zA-Z]/g, '').toUpperCase();
+                const found = POKEBALLS.find(b => b.key === key);
+                currentPokemon.pokeball = found ? found.key : DEFAULT_POKEBALL;
+            }
+        } else if (line.includes('IVs:')) {
+            if (currentPokemon) {
+                // Showdown solo lista los IVs != 31; el resto se asume 31.
+                currentPokemon.ivs = { hp: 31, attack: 31, defense: 31, spAttack: 31, spDefense: 31, speed: 31 };
+                const ivText = line.split('IVs:')[1].trim();
+                ivText.split('/').forEach(pair => {
+                    const [value, stat] = pair.trim().split(' ');
+                    const ivValue = Math.max(0, Math.min(31, parseInt(value) || 0));
+                    if (stat) {
+                        const s = stat.toLowerCase();
+                        if (s === 'hp') currentPokemon.ivs.hp = ivValue;
+                        else if (s === 'atk') currentPokemon.ivs.attack = ivValue;
+                        else if (s === 'def') currentPokemon.ivs.defense = ivValue;
+                        else if (s === 'spa') currentPokemon.ivs.spAttack = ivValue;
+                        else if (s === 'spd') currentPokemon.ivs.spDefense = ivValue;
+                        else if (s === 'spe') currentPokemon.ivs.speed = ivValue;
+                    }
+                });
+            }
+        } else if (line.includes('Tera Type:')) {
             continue;
         } else if (line.includes('@') || (line.includes('(') && !currentPokemon && !line.match(/\s\([MF]\)\s*$/)) || (currentPokemon && currentPokemon.moves.length >= 4) || (!currentPokemon && !line.includes('Ability:') && !line.includes('Nature') && !line.includes('EVs:') && !line.startsWith('-') && line.length > 0)) {
             // Nueva línea de Pokémon
@@ -2796,6 +3021,13 @@ function parseShowdownText(text, team) {
             
             let pokemonName = line.split('@')[0].trim();
             let nickname = '';
+
+            // Género: (M) o (F) en la parte del nombre (antes de @).
+            let parsedGender;
+            const genderMatch = pokemonName.match(/\((M|F)\)\s*$/);
+            if (genderMatch) {
+                parsedGender = genderMatch[1] === 'M' ? 'male' : 'female';
+            }
             
             if (pokemonName.includes('(') && pokemonName.includes(')')) {
                 const match = pokemonName.match(/^(.+?)\s*\((.+?)\)\s*(.*)$/);
@@ -2809,6 +3041,7 @@ function parseShowdownText(text, team) {
                         pokemonName = part2;
                     } else if (part2.match(/^[MF]$/)) {
                         pokemonName = part1;
+                        parsedGender = part2 === 'M' ? 'male' : 'female';
                     } else {
                         nickname = part1;
                         pokemonName = part2;
@@ -2829,6 +3062,9 @@ function parseShowdownText(text, team) {
                 moves: [],
                 nature: 'hardy',
                 level: 50,
+                gender: parsedGender,
+                pokeball: DEFAULT_POKEBALL,
+                ivs: null,
                 selectedAbility: null,
                 heldItem: heldItem,
                 evs: null,
@@ -2847,6 +3083,10 @@ function parseShowdownText(text, team) {
                 
                 let pokemonName = line.split('@')[0].trim();
                 let nickname = '';
+
+                let parsedGender2;
+                const gm2 = pokemonName.match(/\((M|F)\)\s*$/);
+                if (gm2) parsedGender2 = gm2[1] === 'M' ? 'male' : 'female';
                 
                 if (pokemonName.includes('(') && pokemonName.includes(')')) {
                     const match = pokemonName.match(/^(.+?)\s*\((.+?)\)\s*(.*)$/);
@@ -2855,6 +3095,7 @@ function parseShowdownText(text, team) {
                         pokemonName = match[2].trim();
                     }
                 }
+                pokemonName = pokemonName.replace(/\s*\([MF]\)\s*$/, '').trim();
                 
                 let heldItem = '';
                 if (line.includes('@')) {
@@ -2867,6 +3108,9 @@ function parseShowdownText(text, team) {
                     moves: [],
                     nature: 'hardy',
                     level: 50,
+                    gender: parsedGender2,
+                    pokeball: DEFAULT_POKEBALL,
+                    ivs: null,
                     selectedAbility: null,
                     heldItem: heldItem,
                     evs: null,
@@ -2931,8 +3175,9 @@ async function importShowdownPokemon(pokemonList, team) {
                     moves: pokemonData.moves,
                     currentSprite: pokemonData.isShiny ? 'front_shiny' : 'front_default',
                     heldItem: pokemonData.heldItem || '',
+                    pokeball: pokemonData.pokeball || DEFAULT_POKEBALL,
                     evs: pokemonData.evs || null,
-                    ivs: { hp: 31, attack: 31, defense: 31, spAttack: 31, spDefense: 31, speed: 31 },
+                    ivs: pokemonData.ivs || { hp: 31, attack: 31, defense: 31, spAttack: 31, spDefense: 31, speed: 31 },
                     hasEvs: pokemonData.hasEvs || false
                 };
             }
@@ -3134,6 +3379,10 @@ function generateShowdownText(team) {
         } else {
             pokemonLine += pokemon.name.charAt(0).toUpperCase() + pokemon.name.slice(1);
         }
+
+        // Género (formato Showdown: (M) o (F) tras el nombre)
+        if (pokemon.gender === 'male') pokemonLine += ' (M)';
+        else if (pokemon.gender === 'female') pokemonLine += ' (F)';
         
         // Agregar objeto si existe
         if (pokemon.heldItem) {
@@ -3141,10 +3390,20 @@ function generateShowdownText(team) {
         }
         
         showdownText += pokemonLine + '\n';
+
+        // Pokébola (línea reconocida por Showdown; nuestro parser también la lee)
+        if (pokemon.pokeball && pokemon.pokeball !== DEFAULT_POKEBALL) {
+            showdownText += `Ball: ${getPokeballLabel(pokemon.pokeball)}\n`;
+        }
         
         // Habilidad
         if (pokemon.selectedAbility) {
             showdownText += `Ability: ${pokemon.selectedAbility.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}\n`;
+        }
+
+        // Nivel (solo si no es el estándar 50)
+        if (pokemon.level && pokemon.level !== 50) {
+            showdownText += `Level: ${pokemon.level}\n`;
         }
         
         // Shiny
@@ -3170,6 +3429,22 @@ function generateShowdownText(team) {
         if (pokemon.nature && pokemon.nature !== 'hardy') {
             showdownText += `${pokemon.nature.charAt(0).toUpperCase() + pokemon.nature.slice(1)} Nature\n`;
         }
+
+        // IVs (mostrar solo los que no son 31, como hace Showdown)
+        if (pokemon.ivs) {
+            const ivMap = [
+                ['hp', 'HP'], ['attack', 'Atk'], ['defense', 'Def'],
+                ['spAttack', 'SpA'], ['spDefense', 'SpD'], ['speed', 'Spe']
+            ];
+            const ivParts = [];
+            ivMap.forEach(([key, label]) => {
+                const v = pokemon.ivs[key];
+                if (v !== undefined && v !== 31) ivParts.push(`${v} ${label}`);
+            });
+            if (ivParts.length > 0) {
+                showdownText += `IVs: ${ivParts.join(' / ')}\n`;
+            }
+        }
         
         // Movimientos
         if (pokemon.moves && pokemon.moves.length > 0) {
@@ -3185,7 +3460,8 @@ function generateShowdownText(team) {
 }
 
 function updateEvTotal() {
-    const sliders = document.querySelectorAll('.ev-slider');
+    // Excluir los sliders del detalle flotante (tienen su propio total).
+    const sliders = [...document.querySelectorAll('.ev-slider')].filter(s => !s.closest('#compact-pokemon-modal'));
     let total = 0;
     
     sliders.forEach(slider => {
@@ -3225,8 +3501,8 @@ function handleEvSlider(event) {
     const slider = event.target;
     const newValue = parseInt(slider.value);
     
-    // Calcular total si aplicamos este cambio
-    const sliders = document.querySelectorAll('.ev-slider');
+    // Calcular total si aplicamos este cambio (solo sliders del modal clásico)
+    const sliders = [...document.querySelectorAll('.ev-slider')].filter(s => !s.closest('#compact-pokemon-modal'));
     let total = 0;
     sliders.forEach(s => {
         if (s === slider) {
@@ -3629,6 +3905,7 @@ async function createRandomTeam() {
                 nickname: '',
                 currentSprite: 'front_default',
                 heldItem: '',
+                pokeball: DEFAULT_POKEBALL,
                 evs: { hp: 0, attack: 0, defense: 0, spAttack: 0, spDefense: 0, speed: 0 },
                 ivs: { hp: 31, attack: 31, defense: 31, spAttack: 31, spDefense: 31, speed: 31 }
             };
@@ -4230,6 +4507,13 @@ async function addCustomMove(teamId, slotIndex, moveIndex) {
 }
 
 window.removePokemon = removePokemon;
+window.editNickname = editNickname;
+window.editLevel = editLevel;
+window.toggleGender = toggleGender;
+window.openCompactPokemonDetail = openCompactPokemonDetail;
+window.closeCompactPokemonDetail = closeCompactPokemonDetail;
+window.refreshCompactPokemonDetail = refreshCompactPokemonDetail;
+window.renderCompactPokemonDetailBody = renderCompactPokemonDetailBody;
 window.changePokemonSprite = changePokemonSprite;
 window.toggleAnalysisSection = toggleAnalysisSection;
 window.toggleSidebar = toggleSidebar;
@@ -4434,6 +4718,105 @@ function getItemImageTag(itemName, size = 16) {
     const src = getItemImage(itemName);
     if (!src) return '';
     return `<img src="${src}" alt="" style="width: ${size}px; height: ${size}px; object-fit: contain; vertical-align: middle; flex-shrink: 0;" onerror="this.style.display='none'">`;
+}
+
+// ===== Pokébolas =====
+// Lista de pokébolas disponibles. La clave es el identificador guardado en el
+// Pokémon (pokemon.pokeball); el label es el nombre mostrado. Los archivos están
+// en assets/images/Balls como ball_<KEY>.png (cerrada) y ball_<KEY>_open.png (abierta).
+const POKEBALLS = [
+    { key: 'POKEBALL',   label: 'Poké Ball' },
+    { key: 'GREATBALL',  label: 'Great Ball' },
+    { key: 'ULTRABALL',  label: 'Ultra Ball' },
+    { key: 'MASTERBALL', label: 'Master Ball' },
+    { key: 'PREMIERBALL', label: 'Premier Ball' },
+    { key: 'CHERISHBALL', label: 'Cherish Ball' },
+    { key: 'SAFARIBALL', label: 'Safari Ball' },
+    { key: 'FASTBALL',   label: 'Fast Ball' },
+    { key: 'LEVELBALL',  label: 'Level Ball' },
+    { key: 'LUREBALL',   label: 'Lure Ball' },
+    { key: 'HEAVYBALL',  label: 'Heavy Ball' },
+    { key: 'LOVEBALL',   label: 'Love Ball' },
+    { key: 'FRIENDBALL', label: 'Friend Ball' },
+    { key: 'MOONBALL',   label: 'Moon Ball' },
+    { key: 'SPORTBALL',  label: 'Sport Ball' },
+    { key: 'NETBALL',    label: 'Net Ball' },
+    { key: 'DIVEBALL',   label: 'Dive Ball' },
+    { key: 'NESTBALL',   label: 'Nest Ball' },
+    { key: 'REPEATBALL', label: 'Repeat Ball' },
+    { key: 'TIMERBALL',  label: 'Timer Ball' },
+    { key: 'LUXURYBALL', label: 'Luxury Ball' },
+    { key: 'DUSKBALL',   label: 'Dusk Ball' },
+    { key: 'HEALBALL',   label: 'Heal Ball' },
+    { key: 'QUICKBALL',  label: 'Quick Ball' },
+    { key: 'DREAMBALL',  label: 'Dream Ball' },
+    { key: 'BEASTBALL',  label: 'Beast Ball' }
+];
+
+const DEFAULT_POKEBALL = 'POKEBALL';
+
+// IMPORTANTE sobre las imágenes de bolas:
+//   ball_<KEY>.png       = spritesheet horizontal de 256x64 = 8 frames de 32x64
+//                          (animación de giro/caída de la bola).
+//   ball_<KEY>_open.png  = 32x64, un solo frame (bola abierta).
+// Por eso NO se usan como <img> directa (se ven estiradas): se muestran como
+// fondo recortando 1 frame con background-size/position.
+const POKEBALL_FRAMES = 8;
+
+function getPokeballSheet(key) {
+    const k = (key || DEFAULT_POKEBALL).toUpperCase();
+    return `../assets/images/Balls/ball_${k}.png`;
+}
+
+function getPokeballOpenImage(key) {
+    const k = (key || DEFAULT_POKEBALL).toUpperCase();
+    return `../assets/images/Balls/ball_${k}_open.png`;
+}
+
+function getPokeballLabel(key) {
+    const b = POKEBALLS.find(p => p.key === (key || DEFAULT_POKEBALL).toUpperCase());
+    return b ? b.label : 'Poké Ball';
+}
+
+// ===== Huellas (Footprints) =====
+// Los archivos en assets/images/Footprints se llaman <NOMBRE>.png en mayúsculas
+// y solo por especie base (sin formas). Ej: "charizard-mega-x" -> "CHARIZARD.png".
+function getFootprintImage(pokemonName) {
+    if (!pokemonName) return '';
+    const base = pokemonName.split('-')[0]
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/['’.\s]/g, '')
+        .toUpperCase();
+    return `../assets/images/Footprints/${base}.png`;
+}
+
+// HTML del icono de huella (se oculta solo si el PNG no existe para esa especie).
+function getFootprintTag(pokemonName, size = 18) {
+    const src = getFootprintImage(pokemonName);
+    if (!src) return '';
+    return `<img class="footprint-icon" src="${src}" alt="Huella" title="Huella"
+        style="width:${size}px; height:${size}px; object-fit:contain; image-rendering:pixelated;"
+        onerror="this.style.display='none'">`;
+}
+
+// Estilo inline para mostrar 1 frame del spritesheet como fondo.
+// El sheet tiene 8 frames en horizontal; background-size 800% muestra 1 frame,
+// y frameIndex (0..7) selecciona cuál vía background-position-x.
+function pokeballFrameStyle(key, frameIndex = 0) {
+    const sheet = getPokeballSheet(key);
+    // El sheet es 32x64 por frame, pero la bola visible está en la mitad
+    // superior; mostramos el frame completo y el contenedor recorta con overflow.
+    const posX = POKEBALL_FRAMES > 1 ? (frameIndex / (POKEBALL_FRAMES - 1)) * 100 : 0;
+    return `background-image: url('${sheet}'); background-size: ${POKEBALL_FRAMES * 100}% 100%; background-position: ${posX}% 0; background-repeat: no-repeat;`;
+}
+
+// HTML de la pokébola para la esquina de la ficha (frame estático 0).
+function getPokeballBadgeHtml(key, teamId, slotIndex) {
+    const k = (key || DEFAULT_POKEBALL).toUpperCase();
+    const label = getPokeballLabel(k);
+    return `<span class="pokeball-badge" title="${label}" data-ball="${k}"
+        onclick="event.stopPropagation(); openPokemonModal(teams.find(t=>t.id==='${teamId}'), ${slotIndex})"
+        style="${pokeballFrameStyle(k, 0)} cursor: pointer;"></span>`;
 }
 
 // Índice de cada tipo en el spritesheet types_ico.png (columna de celdas 24x28).
